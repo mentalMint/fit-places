@@ -15,24 +15,21 @@ import java.time.Duration;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
 
-public class Location {
-    private String name;
-    private String stringInfo;
-    private LocationInfo locationInfo;
+public class Weather {
+    private final String  longitude;
+    private final String  latitude;
+    private WeatherData weatherData;
 
-    public Location() {
+    public Weather(String longitude, String latitude) {
+        this.longitude = longitude;
+        this.latitude = latitude;
     }
 
-
-    public LocationInfo getLocationInfo() {
-        return locationInfo;
-    }
-
-    public String getStringInfoByName(String name) {
+    public String getStringInfo() {
         String key;
-        try (InputStream keyStream = Main.class.getResourceAsStream("geocoding-key.txt")) {
+        try (InputStream keyStream = Main.class.getResourceAsStream("weather-key.txt")) {
             if (keyStream == null) {
-                System.err.println("Can't find geocoding-key.txt");
+                System.err.println("Can't find weather-key.txt");
                 throw new NullPointerException();
             }
             ByteArrayOutputStream result = new ByteArrayOutputStream();
@@ -45,11 +42,12 @@ public class Location {
             throw new RuntimeException();
         }
 
-//        System.out.println("Geocoding key = " + key);
+//        System.out.println("Weather key = " + key);
 
         try {
             HttpRequest request = HttpRequest.
-                    newBuilder(new URI("https://graphhopper.com/api/1/geocode?q=" + name + "&locale=de&key=" + key)).
+                    newBuilder(new URI("http://api.openweathermap.org/data/2.5/weather?lat=" +
+                            latitude + "&lon=" + longitude + "&appid=" + key)).
                     GET().
                     timeout(Duration.of(5, SECONDS)).
                     build();
@@ -57,11 +55,14 @@ public class Location {
             HttpClient client = HttpClient.newHttpClient();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            locationInfo = new Gson().fromJson(response.body(), LocationInfo.class);
+            weatherData = new Gson().fromJson(response.body(), WeatherData.class);
             return response.body();
         } catch (URISyntaxException | IOException | InterruptedException e) {
             throw new RuntimeException();
         }
+    }
 
+    public WeatherData getWeatherData() {
+        return weatherData;
     }
 }
