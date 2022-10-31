@@ -1,4 +1,4 @@
-package ru.nsu.fit.web;
+package ru.nsu.fit.web.weather;
 
 public class WeatherData {
     public Weather[] weather;

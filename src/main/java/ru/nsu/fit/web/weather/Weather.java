@@ -1,6 +1,7 @@
-package ru.nsu.fit.web;
+package ru.nsu.fit.web.weather;
 
 import com.google.gson.Gson;
+import ru.nsu.fit.web.Main;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,13 +20,14 @@ public class Weather {
     private final String  longitude;
     private final String  latitude;
     private WeatherData weatherData;
+    private String stringData;
 
     public Weather(String longitude, String latitude) {
         this.longitude = longitude;
         this.latitude = latitude;
     }
 
-    public String getStringInfo() {
+    public void initialize() {
         String key;
         try (InputStream keyStream = Main.class.getResourceAsStream("weather-key.txt")) {
             if (keyStream == null) {
@@ -55,11 +57,15 @@ public class Weather {
             HttpClient client = HttpClient.newHttpClient();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+            stringData = response.body();
             weatherData = new Gson().fromJson(response.body(), WeatherData.class);
-            return response.body();
         } catch (URISyntaxException | IOException | InterruptedException e) {
             throw new RuntimeException();
         }
+    }
+
+    public String getStringInfo() {
+        return stringData;
     }
 
     public WeatherData getWeatherData() {

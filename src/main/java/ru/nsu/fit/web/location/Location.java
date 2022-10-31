@@ -1,6 +1,7 @@
-package ru.nsu.fit.web;
+package ru.nsu.fit.web.location;
 
 import com.google.gson.Gson;
+import ru.nsu.fit.web.Main;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,19 +17,15 @@ import java.time.Duration;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
 public class Location {
-    private String name;
+    private final String name;
     private String stringInfo;
     private LocationInfo locationInfo;
 
-    public Location() {
+    public Location(String name) {
+        this.name = name;
     }
 
-
-    public LocationInfo getLocationInfo() {
-        return locationInfo;
-    }
-
-    public String getStringInfoByName(String name) {
+    public void initialize() {
         String key;
         try (InputStream keyStream = Main.class.getResourceAsStream("geocoding-key.txt")) {
             if (keyStream == null) {
@@ -57,11 +54,19 @@ public class Location {
             HttpClient client = HttpClient.newHttpClient();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+            stringInfo = response.body();
             locationInfo = new Gson().fromJson(response.body(), LocationInfo.class);
-            return response.body();
         } catch (URISyntaxException | IOException | InterruptedException e) {
             throw new RuntimeException();
         }
 
+    }
+
+    public LocationInfo getLocationInfo() {
+        return locationInfo;
+    }
+
+    public String getStringInfo() {
+        return stringInfo;
     }
 }
