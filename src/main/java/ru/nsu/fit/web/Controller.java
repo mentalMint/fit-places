@@ -1,5 +1,9 @@
 package ru.nsu.fit.web;
 
+import ru.nsu.fit.web.placeinfo.interestingplaces.InterestingPlacesData;
+import ru.nsu.fit.web.placeinfo.location.LocationsData;
+
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
@@ -11,13 +15,10 @@ public class Controller implements Flow.Subscriber<Object> {
         this.model = new Model();
     }
 
-    public void start()  {
+    public void start() throws ExecutionException, InterruptedException {
         TerminalView terminalView = new TerminalView(model);
         model.subscribe(this);
-    }
-
-    public void search(String placeName) throws ExecutionException, InterruptedException {
-        model.start(placeName);
+        model.start();
     }
 
     @Override
@@ -25,16 +26,77 @@ public class Controller implements Flow.Subscriber<Object> {
 
     }
 
+    private int readInt(int length) {
+        int placeNumber = -1;
+        Scanner scanner = new Scanner(System.in);
+        try {
+            placeNumber = Integer.parseInt(scanner.nextLine()) - 1;
+        } catch (NoSuchElementException | IllegalArgumentException ignored) {
+        }
+
+        while (placeNumber < 0 || placeNumber >= length) {
+            System.out.print("Try again: ");
+            scanner = new Scanner(System.in);
+            try {
+                placeNumber = Integer.parseInt(scanner.nextLine()) - 1;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return placeNumber;
+    }
+
     @Override
     public void onNext(Object item) {
-        if (model.getState() == Model.State.LOCATIONS) {
-            int placeNumber;
-            Scanner scanner = new Scanner(System.in);
-            placeNumber = Integer.parseInt(scanner.nextLine());
-            try {
-                model.searchWeather(placeNumber);
-            } catch (ExecutionException | InterruptedException e) {
-                throw new RuntimeException(e);
+        switch (model.getState()) {
+            case FINISH -> {
+                try {
+                    model.start();
+                } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            case START -> {
+                Scanner scanner = new Scanner(System.in);
+                String placeName = scanner.nextLine();
+                model.setPlaceName(placeName);
+            }
+
+            case LOCATIONS -> {
+                LocationsData.Place[] hits = model.getLocationData().hits;
+                if (hits != null && hits.length != 0) {
+                    int placeNumber = readInt(hits.length);
+                    try {
+                        model.searchInfo(placeNumber);
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    try {
+                        model.start();
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+
+            case INTERESTING_PLACES -> {
+                InterestingPlacesData[] interestingPlacesData = model.getInterestingPlaces().getInterestingPlacesData();
+
+                if (interestingPlacesData != null && interestingPlacesData.length != 0) {
+                    int placeNumber = readInt(interestingPlacesData.length);
+                    try {
+                        model.searchPlaceInfo(placeNumber);
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    try {
+                        model.start();
+                    } catch (ExecutionException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         }
     }

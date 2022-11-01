@@ -12,6 +12,5 @@ public class Main {
 
         Controller controller = new Controller();
         controller.start();
-        controller.search(args[0]);
     }
 }

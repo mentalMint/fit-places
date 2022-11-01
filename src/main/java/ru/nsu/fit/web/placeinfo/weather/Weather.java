@@ -1,48 +1,31 @@
-package ru.nsu.fit.web.weather;
+package ru.nsu.fit.web.placeinfo.weather;
 
 import com.google.gson.Gson;
-import ru.nsu.fit.web.Main;
+import ru.nsu.fit.web.KeyReader;
+import ru.nsu.fit.web.placeinfo.Info;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
 
-public class Weather {
-    private final String  longitude;
-    private final String  latitude;
+public class Weather implements Info {
+    private final String longitude;
+    private final String latitude;
     private WeatherData weatherData;
-    private String stringData;
 
     public Weather(String longitude, String latitude) {
         this.longitude = longitude;
         this.latitude = latitude;
     }
 
-    public void initialize() {
-        String key;
-        try (InputStream keyStream = Main.class.getResourceAsStream("weather-key.txt")) {
-            if (keyStream == null) {
-                System.err.println("Can't find weather-key.txt");
-                throw new NullPointerException();
-            }
-            ByteArrayOutputStream result = new ByteArrayOutputStream();
-            byte[] buffer = new byte[1024];
-            for (int length; (length = keyStream.read(buffer)) != -1; ) {
-                result.write(buffer, 0, length);
-            }
-            key = result.toString(StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException();
-        }
+    public void initialize() throws IOException {
+        String key = KeyReader.readKey("weather-key.txt");
 
 //        System.out.println("Weather key = " + key);
 
@@ -57,15 +40,10 @@ public class Weather {
             HttpClient client = HttpClient.newHttpClient();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            stringData = response.body();
             weatherData = new Gson().fromJson(response.body(), WeatherData.class);
         } catch (URISyntaxException | IOException | InterruptedException e) {
             throw new RuntimeException();
         }
-    }
-
-    public String getStringInfo() {
-        return stringData;
     }
 
     public WeatherData getWeatherData() {
