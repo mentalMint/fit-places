@@ -78,7 +78,7 @@ public class Model implements Flow.Publisher<Object> {
                 ).handle((s, t) -> {
                     if (t != null) {
                         state = State.ERROR;
-                      }
+                    }
                     return null;
                 });
 
@@ -95,37 +95,33 @@ public class Model implements Flow.Publisher<Object> {
         notifySubscribers();
     }
 
-    public void searchInfo(int placeNumber) throws ExecutionException, InterruptedException {
+    private void initWeather(String longitude, String latitude) {
+        weather = new Weather(
+                longitude,
+                latitude);
+        try {
+            weather.initialize();
+        } catch (IOException | URISyntaxException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void searchWeatherAndPlacesInfo(int placeNumber) throws ExecutionException, InterruptedException {
         LocationsData locationInfo = locations.getLocationsData();
         String longitude = locationInfo.hits[placeNumber].point.lng;
         String latitude = locationInfo.hits[placeNumber].point.lat;
 
         CompletableFuture<Void> future1 =
                 CompletableFuture.supplyAsync(() -> {
-                            weather = new Weather(
-                                    longitude,
-                                    latitude);
-                            try {
-                                weather.initialize();
-                            } catch (IOException | URISyntaxException | InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                            return weather;
+                            initWeather(longitude, latitude);
+                            return null;
                         }
                 ).handle((s, t) -> {
-                    if (t != null) {
-                        state = State.ERROR;
-                    }
+                    handleError(t, State.WEATHER);
                     return null;
                 });
 
-        future1.get();
-        synchronized (mutex) {
-            if (state != State.ERROR) {
-                state = State.WEATHER;
-            }
-            notifySubscribers();
-        }
+        future1.join();
 
         CompletableFuture<Void> future2 =
                 CompletableFuture.supplyAsync(() -> {
@@ -164,36 +160,55 @@ public class Model implements Flow.Publisher<Object> {
         return builder.toString().toUpperCase(Locale.ROOT);
     }
 
-    public void start() throws ExecutionException, InterruptedException {
+    private void initLocations() {
+        try {
+            locations.initialize();
+        } catch (IOException | URISyntaxException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void handleError(Throwable t, State newState) {
+        if (t != null) {
+            synchronized (mutex) {
+                state = State.ERROR;
+                notifySubscribers();
+            }
+        } else {
+            synchronized (mutex) {
+                System.err.println("here");
+
+                state = newState;
+                notifySubscribers();
+            }
+        }
+    }
+
+    public void searchSuitablePlaces() throws ExecutionException, InterruptedException {
         state = State.START;
         notifySubscribers();
 
         locations = new Locations(convertToHex(placeName));
         CompletableFuture<Void> completableFuture
-                = CompletableFuture.runAsync(() -> {
-            try {
-                locations.initialize();
-            } catch (IOException | URISyntaxException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }).handle((s, t) -> {
-            if (t != null) {
-                state = State.ERROR;
-            }
+                = CompletableFuture.runAsync(this::initLocations).handle((s, t) -> {
+            handleError(t, State.LOCATIONS);
             return null;
         });
 
-
-        state = State.LOADING;
-        notifySubscribers();
-
-        completableFuture.get();
         synchronized (mutex) {
-            if (state != State.ERROR) {
-                state = State.LOCATIONS;
+            if (state == State.START) {
+                state = State.LOADING;
+                notifySubscribers();
             }
-            notifySubscribers();
         }
+
+        completableFuture.join();
+//        synchronized (mutex) {
+//            if (state != State.ERROR) {
+//                state = State.LOCATIONS;
+//            }
+//            notifySubscribers();
+//        }
     }
 
     @Override

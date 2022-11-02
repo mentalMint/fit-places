@@ -18,7 +18,7 @@ public class Controller implements Flow.Subscriber<Object> {
     public void start() throws ExecutionException, InterruptedException {
         TerminalView terminalView = new TerminalView(model);
         model.subscribe(this);
-        model.start();
+        model.searchSuitablePlaces();
     }
 
     @Override
@@ -50,7 +50,7 @@ public class Controller implements Flow.Subscriber<Object> {
         switch (model.getState()) {
             case FINISH, ERROR -> {
                 try {
-                    model.start();
+                    model.searchSuitablePlaces();
                 } catch (ExecutionException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -67,13 +67,13 @@ public class Controller implements Flow.Subscriber<Object> {
                 if (hits != null && hits.length != 0) {
                     int placeNumber = readInt(hits.length);
                     try {
-                        model.searchInfo(placeNumber);
+                        model.searchWeatherAndPlacesInfo(placeNumber);
                     } catch (ExecutionException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 } else {
                     try {
-                        model.start();
+                        model.searchSuitablePlaces();
                     } catch (ExecutionException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -92,7 +92,7 @@ public class Controller implements Flow.Subscriber<Object> {
                     }
                 } else {
                     try {
-                        model.start();
+                        model.searchSuitablePlaces();
                     } catch (ExecutionException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
