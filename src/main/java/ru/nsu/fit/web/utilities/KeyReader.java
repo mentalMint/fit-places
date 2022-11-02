@@ -1,4 +1,6 @@
-package ru.nsu.fit.web;
+package ru.nsu.fit.web.utilities;
+
+import ru.nsu.fit.web.Main;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

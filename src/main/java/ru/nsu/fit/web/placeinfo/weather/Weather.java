@@ -1,18 +1,12 @@
 package ru.nsu.fit.web.placeinfo.weather;
 
 import com.google.gson.Gson;
-import ru.nsu.fit.web.KeyReader;
+import ru.nsu.fit.web.utilities.JSONGetter;
+import ru.nsu.fit.web.utilities.KeyReader;
 import ru.nsu.fit.web.placeinfo.Info;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-
-import static java.time.temporal.ChronoUnit.SECONDS;
 
 public class Weather implements Info {
     private final String longitude;
@@ -24,26 +18,12 @@ public class Weather implements Info {
         this.latitude = latitude;
     }
 
-    public void initialize() throws IOException {
+    public void initialize() throws IOException, URISyntaxException, InterruptedException {
         String key = KeyReader.readKey("weather-key.txt");
 
-//        System.out.println("Weather key = " + key);
-
-        try {
-            HttpRequest request = HttpRequest.
-                    newBuilder(new URI("http://api.openweathermap.org/data/2.5/weather?lat=" +
-                            latitude + "&lon=" + longitude + "&appid=" + key)).
-                    GET().
-                    timeout(Duration.of(5, SECONDS)).
-                    build();
-
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            weatherData = new Gson().fromJson(response.body(), WeatherData.class);
-        } catch (URISyntaxException | IOException | InterruptedException e) {
-            throw new RuntimeException();
-        }
+        String json = JSONGetter.get("http://api.openweathermap.org/data/2.5/weather?lat=" +
+                latitude + "&lon=" + longitude + "&appid=" + key);
+        weatherData = new Gson().fromJson(json, WeatherData.class);
     }
 
     public WeatherData getWeatherData() {

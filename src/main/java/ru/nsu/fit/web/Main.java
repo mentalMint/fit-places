@@ -1,5 +1,7 @@
 package ru.nsu.fit.web;
 
+import ru.nsu.fit.web.mvc.Controller;
+
 import java.util.concurrent.ExecutionException;
 
 public class Main {

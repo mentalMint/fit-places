@@ -1,4 +1,4 @@
-package ru.nsu.fit.web;
+package ru.nsu.fit.web.mvc;
 
 import ru.nsu.fit.web.placeinfo.interestingplaces.InterestingPlacesData;
 import ru.nsu.fit.web.placeinfo.location.LocationsData;
@@ -48,7 +48,7 @@ public class Controller implements Flow.Subscriber<Object> {
     @Override
     public void onNext(Object item) {
         switch (model.getState()) {
-            case FINISH -> {
+            case FINISH, ERROR -> {
                 try {
                     model.start();
                 } catch (ExecutionException | InterruptedException e) {
@@ -63,7 +63,7 @@ public class Controller implements Flow.Subscriber<Object> {
             }
 
             case LOCATIONS -> {
-                LocationsData.Place[] hits = model.getLocationData().hits;
+                LocationsData.Place[] hits = model.getLocations().getLocationsData().hits;
                 if (hits != null && hits.length != 0) {
                     int placeNumber = readInt(hits.length);
                     try {

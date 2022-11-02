@@ -1,4 +1,4 @@
-package ru.nsu.fit.web;
+package ru.nsu.fit.web.mvc;
 
 import ru.nsu.fit.web.placeinfo.interestingplaces.InterestingPlacesData;
 import ru.nsu.fit.web.placeinfo.location.LocationsData;
@@ -23,15 +23,15 @@ public class TerminalView implements Flow.Subscriber<Object> {
     @Override
     public void onNext(Object item) {
         switch (model.getState()) {
-            case START -> System.out.print("\nEnter place name: ");
+            case START -> System.out.print("Enter place name: ");
             case LOADING -> System.out.print("Loading...");
             case LOCATIONS -> {
-                LocationsData.Place[] hits = model.getLocationData().hits;
+                LocationsData.Place[] hits = model.getLocations().getLocationsData().hits;
                 System.out.print("\r");
                 System.out.println("          ");
                 if (hits != null) {
                     if (hits.length == 0) {
-                        System.out.println("No such places");
+                        System.out.println("No such places\n");
                     } else {
                         System.out.println("===Available places===");
                         for (int i = 0; i < hits.length; i++) {
@@ -63,7 +63,7 @@ public class TerminalView implements Flow.Subscriber<Object> {
                         System.out.print("Choose place: ");
                     }
                 } else {
-                    System.out.println("No such places");
+                    System.out.println("No such places\n");
                 }
             }
 
@@ -76,7 +76,7 @@ public class TerminalView implements Flow.Subscriber<Object> {
                     System.out.println("Description: " + weatherData.weather[0].description);
                     System.out.println("====================");
                 } else {
-                    System.out.println("No information about weather here");
+                    System.out.println("No information about weather here\n");
                 }
             }
 
@@ -85,9 +85,9 @@ public class TerminalView implements Flow.Subscriber<Object> {
                 System.out.println();
 
                 if (interestingPlacesData == null || interestingPlacesData.length == 0) {
-                    System.out.println("Nothing interesting in here(");
+                    System.out.println("Nothing interesting in here(\n");
                 } else {
-                    System.out.println("Interesting places here:");
+                    System.out.println("===Places of interest nearby===");
                     for (int i = 0; i < interestingPlacesData.length; i++) {
                         if (interestingPlacesData[i] != null) {
                             if (interestingPlacesData[i].name != null) {
@@ -99,6 +99,7 @@ public class TerminalView implements Flow.Subscriber<Object> {
                             System.out.println();
                         }
                     }
+                    System.out.println("=============================\n");
                     System.out.print("Choose certain place: ");
                 }
             }
@@ -124,11 +125,14 @@ public class TerminalView implements Flow.Subscriber<Object> {
                     if (placeData.wikipedia != null) {
                         System.out.println(placeData.wikipedia);
                     }
-                    System.out.println("==================================");
+                    System.out.println("==================================\n");
                 } else {
-                    System.out.println("No information about this place");
+                    System.out.println("No information about this place\n");
                 }
             }
+
+            case ERROR -> System.out.println("\rError occurred\n");
+
         }
     }
 
