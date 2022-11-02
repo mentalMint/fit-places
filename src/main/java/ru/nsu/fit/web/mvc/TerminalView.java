@@ -93,41 +93,38 @@ public class TerminalView implements Flow.Subscriber<Object> {
                             if (interestingPlacesData[i].name != null) {
                                 System.out.println((i + 1) + ". " + interestingPlacesData[i].name);
                             }
-                            if (interestingPlacesData[i].kind != null) {
-                                System.out.println("Kind: " + interestingPlacesData[i].kind);
+//                            if (interestingPlacesData[i].kind != null) {
+//                                System.out.println("Kind: " + interestingPlacesData[i].kind);
+//                            }
+
+                            PlaceData placeData = model.getPlaces().get(i).getPlaceData();
+                            if (placeData != null) {
+//                                System.out.println("===Information about this place===");
+                                if (placeData.info != null) {
+                                    if (placeData.info.descr != null) {
+                                        System.out.println(placeData.info.descr);
+                                    }
+                                }
+//                                if (placeData.name != null) {
+//                                    System.out.println("Name: " + placeData.name);
+//                                }
+                                if (placeData.kinds != null) {
+                                    System.out.println("Kind: " + placeData.kinds);
+                                }
+                                if (placeData.rate != null) {
+                                    System.out.println("Rate: " + placeData.rate);
+                                }
+                                if (placeData.wikipedia != null) {
+                                    System.out.println(placeData.wikipedia);
+                                }
+                                System.out.println("\n_______________________________\n");
+                            } else {
+                                System.out.println("No information about this place\n");
                             }
-                            System.out.println();
+
                         }
                     }
                     System.out.println("=============================\n");
-                    System.out.print("Choose certain place: ");
-                }
-            }
-
-            case CERTAIN_PLACE -> {
-                PlaceData placeData = model.getPlace().getPlaceData();
-                if (placeData != null) {
-                    System.out.println("\n===Information about this place===");
-                    if (placeData.info != null) {
-                        if (placeData.info.descr != null) {
-                            System.out.println(placeData.info.descr);
-                        }
-                    }
-                    if (placeData.name != null) {
-                        System.out.println("Name: " + placeData.name);
-                    }
-                    if (placeData.kinds != null) {
-                        System.out.println("Kind: " + placeData.kinds);
-                    }
-                    if (placeData.rate != null) {
-                        System.out.println("Rate: " + placeData.rate);
-                    }
-                    if (placeData.wikipedia != null) {
-                        System.out.println(placeData.wikipedia);
-                    }
-                    System.out.println("==================================\n");
-                } else {
-                    System.out.println("No information about this place\n");
                 }
             }
 

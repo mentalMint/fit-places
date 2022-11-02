@@ -1,6 +1,5 @@
 package ru.nsu.fit.web.mvc;
 
-import ru.nsu.fit.web.placeinfo.interestingplaces.InterestingPlacesData;
 import ru.nsu.fit.web.placeinfo.location.LocationsData;
 
 import java.util.NoSuchElementException;
@@ -67,26 +66,7 @@ public class Controller implements Flow.Subscriber<Object> {
                 if (hits != null && hits.length != 0) {
                     int placeNumber = readInt(hits.length);
                     try {
-                        model.searchWeatherAndPlacesInfo(placeNumber);
-                    } catch (ExecutionException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                } else {
-                    try {
-                        model.searchSuitablePlaces();
-                    } catch (ExecutionException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-
-            case INTERESTING_PLACES -> {
-                InterestingPlacesData[] interestingPlacesData = model.getInterestingPlaces().getInterestingPlacesData();
-
-                if (interestingPlacesData != null && interestingPlacesData.length != 0) {
-                    int placeNumber = readInt(interestingPlacesData.length);
-                    try {
-                        model.searchPlaceInfo(placeNumber);
+                        model.searchInfo(placeNumber);
                     } catch (ExecutionException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }

@@ -21,7 +21,7 @@ public class Model implements Flow.Publisher<Object> {
     private Locations locations;
     private Weather weather;
     private InterestingPlaces interestingPlaces;
-    private Place place;
+    private ArrayList<Place> places;
     private String placeName;
     private final Object mutex = new Object();
 
@@ -31,7 +31,6 @@ public class Model implements Flow.Publisher<Object> {
         LOCATIONS,
         WEATHER,
         INTERESTING_PLACES,
-        CERTAIN_PLACE,
         FINISH,
         LOADING,
         ERROR
@@ -39,6 +38,10 @@ public class Model implements Flow.Publisher<Object> {
 
     public void setPlaceName(String placeName) {
         this.placeName = placeName;
+    }
+
+    public ArrayList<Place> getPlaces() {
+        return places;
     }
 
     private final ArrayList<Flow.Subscriber<? super Object>> subscribes = new ArrayList<>();
@@ -59,21 +62,22 @@ public class Model implements Flow.Publisher<Object> {
         return interestingPlaces;
     }
 
-    public Place getPlace() {
-        return place;
-    }
+    public void searchInfo(int placeNumber) throws ExecutionException, InterruptedException {
+        LocationsData locationInfo = locations.getLocationsData();
+        String longitude = locationInfo.hits[placeNumber].point.lng;
+        String latitude = locationInfo.hits[placeNumber].point.lat;
 
-    public void searchPlaceInfo(int placeNumber) throws ExecutionException, InterruptedException {
-        String xid = interestingPlaces.getInterestingPlacesData()[placeNumber].xid;
         CompletableFuture<Void> future1 =
                 CompletableFuture.supplyAsync(() -> {
-                            place = new Place(xid);
+                            weather = new Weather(
+                                    longitude,
+                                    latitude);
                             try {
-                                place.initialize();
+                                weather.initialize();
                             } catch (IOException | URISyntaxException | InterruptedException e) {
                                 throw new RuntimeException(e);
                             }
-                            return place;
+                            return weather;
                         }
                 ).handle((s, t) -> {
                     if (t != null) {
@@ -82,46 +86,13 @@ public class Model implements Flow.Publisher<Object> {
                     return null;
                 });
 
-
         future1.get();
         synchronized (mutex) {
             if (state != State.ERROR) {
-                state = State.CERTAIN_PLACE;
+                state = State.WEATHER;
             }
             notifySubscribers();
         }
-
-        state = State.FINISH;
-        notifySubscribers();
-    }
-
-    private void initWeather(String longitude, String latitude) {
-        weather = new Weather(
-                longitude,
-                latitude);
-        try {
-            weather.initialize();
-        } catch (IOException | URISyntaxException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void searchWeatherAndPlacesInfo(int placeNumber) throws ExecutionException, InterruptedException {
-        LocationsData locationInfo = locations.getLocationsData();
-        String longitude = locationInfo.hits[placeNumber].point.lng;
-        String latitude = locationInfo.hits[placeNumber].point.lat;
-
-        CompletableFuture<Void> future1 =
-                CompletableFuture.supplyAsync(() -> {
-                            initWeather(longitude, latitude);
-                            return null;
-                        }
-                ).handle((s, t) -> {
-                    handleError(t, State.WEATHER);
-                    return null;
-                });
-
-        future1.join();
 
         CompletableFuture<Void> future2 =
                 CompletableFuture.supplyAsync(() -> {
@@ -140,6 +111,36 @@ public class Model implements Flow.Publisher<Object> {
                         state = State.ERROR;
                     }
                     return null;
+                }).thenAccept(s -> {
+                    places = new ArrayList<>();
+                    ArrayList<CompletableFuture<Void>> futures = new ArrayList<>();
+                    for (int i = 0; i < interestingPlaces.getInterestingPlacesData().length; i++) {
+                        String xidi = interestingPlaces.getInterestingPlacesData()[i].xid;
+                        Place placei = new Place(xidi);
+                        places.add(placei);
+                        futures.add(CompletableFuture.supplyAsync(() -> {
+                                    try {
+                                        placei.initialize();
+                                    } catch (IOException | URISyntaxException | InterruptedException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                    return null;
+                                }
+                        ).handle((a, t) -> {
+                            if (t != null) {
+                                state = State.ERROR;
+                            }
+                            return null;
+                        }));
+                    }
+
+                    for (int i = 0; i < interestingPlaces.getInterestingPlacesData().length; i++) {
+                        try {
+                            futures.get(i).get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                 });
 
         future2.get();
@@ -149,6 +150,10 @@ public class Model implements Flow.Publisher<Object> {
             }
             notifySubscribers();
         }
+
+
+        state = State.FINISH;
+        notifySubscribers();
     }
 
     private static String convertToHex(String name) {
@@ -160,55 +165,36 @@ public class Model implements Flow.Publisher<Object> {
         return builder.toString().toUpperCase(Locale.ROOT);
     }
 
-    private void initLocations() {
-        try {
-            locations.initialize();
-        } catch (IOException | URISyntaxException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void handleError(Throwable t, State newState) {
-        if (t != null) {
-            synchronized (mutex) {
-                state = State.ERROR;
-                notifySubscribers();
-            }
-        } else {
-            synchronized (mutex) {
-                System.err.println("here");
-
-                state = newState;
-                notifySubscribers();
-            }
-        }
-    }
-
     public void searchSuitablePlaces() throws ExecutionException, InterruptedException {
         state = State.START;
         notifySubscribers();
 
         locations = new Locations(convertToHex(placeName));
         CompletableFuture<Void> completableFuture
-                = CompletableFuture.runAsync(this::initLocations).handle((s, t) -> {
-            handleError(t, State.LOCATIONS);
+                = CompletableFuture.runAsync(() -> {
+            try {
+                locations.initialize();
+            } catch (IOException | URISyntaxException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).handle((s, t) -> {
+            if (t != null) {
+                state = State.ERROR;
+            }
             return null;
         });
 
-        synchronized (mutex) {
-            if (state == State.START) {
-                state = State.LOADING;
-                notifySubscribers();
-            }
-        }
 
-        completableFuture.join();
-//        synchronized (mutex) {
-//            if (state != State.ERROR) {
-//                state = State.LOCATIONS;
-//            }
-//            notifySubscribers();
-//        }
+        state = State.LOADING;
+        notifySubscribers();
+
+        completableFuture.get();
+        synchronized (mutex) {
+            if (state != State.ERROR) {
+                state = State.LOCATIONS;
+            }
+            notifySubscribers();
+        }
     }
 
     @Override
